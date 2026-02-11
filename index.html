@@ -1,23 +1,4 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <title>Marque sua Presença</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <style>
-    body {
-  font-family: system-ui;
-  background: #f06d06;
-  color: white;
-  text-align: center;
-}
-  </style>
-</head>
-<body>
-
- <!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -123,7 +104,7 @@
             </form>
 
             <!-- Lista de Validações -->
-            <div id="validationsList" class="hidden mt-6">
+            <div id="validationsList" class="mt-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold text-gray-800">Registros Validados</h3>
                     <div class="flex gap-2">
@@ -170,6 +151,9 @@
     </div>
 
     <script>
+      // Detecta se é admin pela URL
+const params = new URLSearchParams(window.location.search);
+const isAdmin = params.get("admin") === "1";
         // Base de dados - SUBSTITUA pelos seus dados reais
         const baseDados = [
  ];
@@ -184,8 +168,32 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const clearBtn = document.getElementById('clearBtn');
 
+if (!isAdmin) {
+    validationsList.classList.add("hidden");
+}
+      
         let isAutoFilling = false;
         let validatedRecords = [];
+
+      function enviarPresenca(nome, matricula) {
+  fetch("https://script.google.com/macros/s/AKfycbzV_ZVt7FUcunJQ83ZsmmtkIfs0nONNghCzDCSpIkeOt5NIFkxKAcTzooe6qU8UfWsd/exec", {
+    method: "POST",
+    body: JSON.stringify({
+      nome: nome,
+      matricula: matricula,
+      origem: "participante"
+    }),
+    headers: {
+      "Content-Type": "application/json"
+    }
+  })
+  .then(() => {
+    showMessage("Presença registrada com sucesso!", "success");
+  })
+  .catch(() => {
+    showMessage("Erro ao registrar presença.", "error");
+  });
+}
 
         function showMessage(text, type) {
             messageDiv.textContent = text;
@@ -260,35 +268,40 @@
                 atualizarListaValidacoes();
             }
         }
+      function atualizarListaValidacoes() {
+    if (validatedRecords.length === 0) {
+        validationsList.classList.add('hidden');
+        totalCount.textContent = 0;
+        validationsTable.innerHTML = '';
+        return;
+    }
 
-        function atualizarListaValidacoes() {
-            if (validatedRecords.length === 0) {
-                validationsList.classList.add('hidden');
-                return;
-            }
+    validationsList.classList.remove('hidden');
+    totalCount.textContent = validatedRecords.length;
 
-            validationsList.classList.remove('hidden');
-            totalCount.textContent = validatedRecords.length;
-            
-            validationsTable.innerHTML = validatedRecords.map((record, index) => `
-                <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
-                    <div class="flex-1">
-                        <div class="font-medium text-gray-800">${record.nome}</div>
-                        <div class="text-sm text-gray-600">Matrícula: ${record.matricula}</div>
-                        <div class="text-xs text-gray-500">${record.timestamp}</div>
-                    </div>
-                    <button 
-                        onclick="removerValidacao(${index})" 
-                        class="text-red-500 hover:text-red-700 p-1"
-                        title="Remover registro"
-                    >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            `).join('');
-        }
+    validationsTable.innerHTML = validatedRecords.map((record, index) => `
+        <div class="flex items-center justify-between bg-white p-3 rounded-lg border border-gray-200">
+            <div class="flex-1">
+                <div class="font-medium text-gray-800">${record.nome}</div>
+                <div class="text-sm text-gray-600">Matrícula: ${record.matricula}</div>
+                <div class="text-xs text-gray-500">${record.timestamp}</div>
+            </div>
+
+            ${isAdmin ? `
+            <button 
+                onclick="removerValidacao(${index})"
+                class="text-red-500 hover:text-red-700 p-1"
+                title="Remover registro"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+            ` : ''}
+        </div>
+    `).join('');
+}
 
         function removerValidacao(index) {
             validatedRecords.splice(index, 1);
@@ -374,7 +387,10 @@
             e.preventDefault();
             
             const nome = nomeInput.value.trim();
-            const matricula = matriculaInput.value.trim();
+const matricula = matriculaInput.value.trim();
+
+let nomeFinal = nome;
+let matriculaFinal = matricula;
             
             if (!nome && !matricula) {
                 showMessage('Por favor, preencha pelo menos um campo.', 'error');
@@ -391,7 +407,9 @@
                     resultadoNome.matricula === matricula && 
                     normalizeText(resultadoMatricula.nome) === normalizeText(nome)) {
                     encontrado = true;
-                    adicionarValidacao(nome, matricula);
+                    nomeFinal = nome;
+matriculaFinal = matricula;
+adicionarValidacao(nomeFinal, matriculaFinal);
                     showMessage(`Dados confirmados e registrados! ${nome} - Matrícula: ${matricula}`, 'success');
                 } else {
                     showMessage('Os dados não coincidem. Verifique as informações.', 'error');
@@ -402,7 +420,9 @@
                 const resultado = buscarPorNome(nome);
                 if (resultado) {
                     encontrado = true;
-                    adicionarValidacao(resultado.nome, resultado.matricula);
+                    nomeFinal = resultado.nome;
+matriculaFinal = resultado.matricula;
+adicionarValidacao(nomeFinal, matriculaFinal);
                     showMessage(`Dados encontrados e registrados! ${resultado.nome} - Matrícula: ${resultado.matricula}`, 'success');
                 } else {
                     showMessage('Nome não encontrado na base de dados.', 'error');
@@ -412,7 +432,9 @@
                 const resultado = buscarPorMatricula(matricula);
                 if (resultado) {
                     encontrado = true;
-                    adicionarValidacao(resultado.nome, resultado.matricula);
+                    nomeFinal = resultado.nome;
+matriculaFinal = resultado.matricula;
+adicionarValidacao(nomeFinal, matriculaFinal);
                     showMessage(`Dados encontrados e registrados! ${resultado.nome} - Matrícula: ${resultado.matricula}`, 'success');
                 } else {
                     showMessage('Matrícula não encontrada na base de dados.', 'error');
@@ -420,20 +442,24 @@
                 }
             }
             
-            // Limpar campos após validação bem-sucedida
-            if (encontrado) {
-                setTimeout(() => {
-                    nomeInput.value = '';
-                    matriculaInput.value = '';
-                    nomeInput.classList.remove('auto-filled');
-                    matriculaInput.classList.remove('auto-filled');
-                }, 1500);
-            }
+            // Limpar campos após validação bem-sucedida  
+          if (encontrado) {
+    enviarPresenca(nomeFinal, matriculaFinal);
+
+    setTimeout(() => {
+        nomeInput.value = '';
+        matriculaInput.value = '';
+        nomeInput.classList.remove('auto-filled');
+        matriculaInput.classList.remove('auto-filled');
+    }, 1500);
+}
         });
 
         // Event listeners para os botões
-        downloadBtn.addEventListener('click', baixarPlanilha);
-        clearBtn.addEventListener('click', limparRegistros);
+        if (isAdmin) {
+    downloadBtn.addEventListener('click', baixarPlanilha);
+    clearBtn.addEventListener('click', limparRegistros);
+}
 
         // Limpar campos ao clicar fora
         document.addEventListener('click', function(e) {
@@ -442,9 +468,6 @@
                 matriculaInput.classList.remove('auto-filled');
             }
         });
-    </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98e8d4bc62f34ae9',t:'MTc2MDQ2MzMwMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
-</html>
-
+      </script>
 </body>
 </html>
